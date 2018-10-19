@@ -1,0 +1,134 @@
+---
+title: "Google Play EDA"
+output: html_notebook
+---
+
+```{r setup}
+# Packages ----
+library(tidyverse)
+library(magrittr)
+```
+
+# Data
+Read in data... data comes from...
+
+```{r}
+google_store <- read_csv("data/googleplaystore.csv") %>% 
+  janitor::clean_names(case = "snake")
+```
+
+```{r}
+problems(google_store)
+```
+
+Remove the bad row
+```{r}
+google_store <- google_store[-10473,]
+```
+
+
+```{r}
+names(google_store)
+```
+
+```{r}
+head(google_store)
+```
+
+## Size
+Investigate the size column....
+
+```{r}
+google_store %>% 
+  count(size_measurement = str_extract(size, "[A-Z]*$"))
+```
+
+```{r}
+google_store <- google_store %>% 
+  mutate(
+    numeric_size = as.numeric(str_extract(size, "[0-9.]*")),
+    known_megabytes = str_detect(size, "M$")
+  )
+```
+
+
+```{r}
+google_store %>% 
+  ggplot(aes(x = numeric_size, col = known_megabytes)) +
+  geom_density()
+```
+
+```{r}
+count(google_store, known_megabytes)
+
+google_store %>% 
+  count(known_megabytes, missing_size = is.na(numeric_size))
+```
+
+```{r}
+google_store %>% 
+  filter(!known_megabytes, is.na(numeric_size)) %>% 
+  select(known_megabytes,
+         numeric_size,
+         size) %>% 
+  count(size)
+```
+
+## Price
+```{r}
+google_store %>% 
+  count(price)
+```
+
+```{r}
+sample_price <- google_store %>% 
+  filter(price != "0") %>% 
+  sample_n(10) %>%  
+  select(price) 
+  
+sample_price <- sample_price$price
+```
+
+
+```{r}
+sample_price
+```
+
+```{r}
+as.numeric(str_replace(sample_price, "\\$", ""))
+```
+
+```{r}
+google_store <- google_store %>% 
+  mutate(numeric_price = as.numeric(str_replace(price, "\\$", "")))
+```
+
+```{r}
+google_store %>% 
+  filter(is.na(numeric_price)) %>% 
+  select(numeric_price, price)
+```
+
+```{r}
+google_store %>% 
+  count(numeric_price, sort = TRUE)
+```
+
+```{r}
+google_store %>% 
+  arrange(-numeric_price) %>% 
+  select(numeric_price, app)
+```
+
+```{r}
+google_store %>% 
+  count(i_am_broke = str_detect(tolower(app), "i am rich|i'm rich"),
+        installs,
+        numeric_price)
+```
+
+```{r}
+google_store %>% 
+  count(installs)
+```
+
